@@ -1,0 +1,9 @@
+{
+  "requestContext": {
+    "authorizer": {
+      "iam": {
+        "userId": "user-001"
+      }
+    }
+  }
+}

@@ -1,0 +1,137 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: smart-device-api
+
+Globals:
+  Function:
+    Timeout: 5
+    Tracing: Active
+
+Resources:
+
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: SmartDeviceUserPool
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 6
+          RequireUppercase: false
+          RequireLowercase: false
+          RequireNumbers: true
+          RequireSymbols: false
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: smart-device-client
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+      CallbackURLs:
+        - http://localhost:3000/callback
+      LogoutURLs:
+        - http://localhost:3000/logout
+      SupportedIdentityProviders:
+        - COGNITO
+
+  CognitoUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: smart-device-demo-domain
+      UserPoolId: !Ref CognitoUserPool
+
+  MyApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: SmartDeviceApi
+      StageName: Prod
+      TracingEnabled: true
+      Cors:
+        AllowMethods: "'GET,OPTIONS'"
+        AllowHeaders: "'Authorization,Content-Type'"
+        AllowOrigin: "'*'"
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt CognitoUserPool.Arn
+            Identity:
+              Header: Authorization
+
+  GetDevicesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: get-devices/
+      Handler: app.lambdaHandler
+      Runtime: nodejs20.x
+      Events:
+        GetDevices:
+          Type: Api
+          Properties:
+            Path: /devices
+            Method: get
+            RestApiId: !Ref MyApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+        DevicesOptions:
+          Type: Api
+          Properties:
+            Path: /devices
+            Method: options
+            RestApiId: !Ref MyApi
+            Auth:
+              Authorizer: NONE
+      Environment:
+        Variables:
+          DEVICES_TABLE: Devices
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices/index/user_id-index
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Users
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
+
+  GetDevicesFunctionArn:
+    Description: "ARN of GetDevices Lambda"
+    Value: !GetAtt GetDevicesFunction.Arn
+
+  CognitoUserPoolId:
+    Description: "Cognito User Pool ID"
+    Value: !Ref CognitoUserPool
+
+  CognitoUserPoolClientId:
+    Description: "Cognito User Pool Client ID"
+    Value: !Ref CognitoUserPoolClient
+
+  CognitoUserPoolDomain:
+    Description: "Cognito Domain"
+    Value: !Ref CognitoUserPoolDomain
