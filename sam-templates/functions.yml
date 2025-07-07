@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Lambda functions for SmartDeviceApi
+
+Parameters:
+  Api:
+    Type: String
+    Description: RestApiId del API Gateway principal
+
+Resources:
+
+  GetDevicesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: get-devices/
+      Handler: app.lambdaHandler
+      Runtime: nodejs20.x
+      Events:
+        GetDevices:
+          Type: Api
+          Properties:
+            Path: /devices
+            Method: get
+            RestApiId: !Ref Api
+            Auth:
+              Authorizer: CognitoAuthorizer
+        DevicesOptions:
+          Type: Api
+          Properties:
+            Path: /devices
+            Method: options
+            RestApiId: !Ref Api
+            Auth:
+              Authorizer: NONE
+      Environment:
+        Variables:
+          DEVICES_TABLE: Devices
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices/index/user_id-index
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Users
+
+Outputs:
+
+  GetDevicesFunctionArn:
+    Description: "ARN of GetDevices Lambda"
+    Value: !GetAtt GetDevicesFunction.Arn

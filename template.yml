@@ -9,6 +9,7 @@ Globals:
 
 Resources:
 
+  ## --- Cognito User Pool ---
   CognitoUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -44,8 +45,10 @@ Resources:
         - profile
       CallbackURLs:
         - http://localhost:3000/callback
+        - https://app.domoticore.co/callback
       LogoutURLs:
         - http://localhost:3000/logout
+        - https://app.domoticore.co/logout
       SupportedIdentityProviders:
         - COGNITO
 
@@ -55,6 +58,7 @@ Resources:
       Domain: smart-device-demo-domain
       UserPoolId: !Ref CognitoUserPool
 
+  ## --- API Gateway ---
   MyApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -73,6 +77,7 @@ Resources:
             Identity:
               Header: Authorization
 
+  ## --- Lambda Functions ---
   GetDevicesFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -99,6 +104,8 @@ Resources:
       Environment:
         Variables:
           DEVICES_TABLE: Devices
+          DEVICE_ALIASES_TABLE: deviceAliases
+          USERS_TABLE: Users
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
@@ -109,11 +116,39 @@ Resources:
               Resource:
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices/index/user_id-index
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/deviceAliases
             - Effect: Allow
               Action:
                 - dynamodb:GetItem
+                - dynamodb:PutItem
               Resource:
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Users
+
+  ## --- Nested Stacks para tablas DynamoDB ---
+  DevicesTableStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./sam-templates/tables/devices.yml
+
+  UsersTableStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./sam-templates/tables/users.yml
+
+  DeviceAliasesTableStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./sam-templates/tables/device-aliases.yml
+
+  RaspberryPisTableStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./sam-templates/tables/raspberry-pis.yml
+
+  SharedAccessTableStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./sam-templates/tables/shared-access.yml
 
 Outputs:
   ApiUrl:
