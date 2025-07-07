@@ -127,26 +127,31 @@ Resources:
   ## --- Nested Stacks para tablas DynamoDB ---
   DevicesTableStack:
     Type: AWS::Serverless::Application
+    DeletionPolicy: Retain
     Properties:
       Location: ./sam-templates/tables/devices.yml
 
   UsersTableStack:
     Type: AWS::Serverless::Application
+    DeletionPolicy: Retain
     Properties:
       Location: ./sam-templates/tables/users.yml
 
   DeviceAliasesTableStack:
     Type: AWS::Serverless::Application
+    DeletionPolicy: Retain
     Properties:
       Location: ./sam-templates/tables/device-aliases.yml
 
   RaspberryPisTableStack:
     Type: AWS::Serverless::Application
+    DeletionPolicy: Retain
     Properties:
       Location: ./sam-templates/tables/raspberry-pis.yml
 
   SharedAccessTableStack:
     Type: AWS::Serverless::Application
+    DeletionPolicy: Retain
     Properties:
       Location: ./sam-templates/tables/shared-access.yml
 
