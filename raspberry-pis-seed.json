@@ -1,0 +1,46 @@
+{
+  "RaspberryPis": [
+    {
+      "PutRequest": {
+        "Item": {
+          "raspi_id":     { "S": "rpi-001" },
+          "user_id":      { "S": "24087468-10d1-70d3-0cff-751e07844311" },
+          "registered_at":{ "S": "2025-07-03T12:00:00Z" },
+          "status":       { "S": "active" },
+          "model":        { "S": "Raspberry Pi 4 Model B" },
+          "last_seen":    { "S": "2025-07-10T18:30:00Z" },
+          "ip_address":   { "S": "192.168.1.10" },
+          "description":  { "S": "Raspberry en sala de control" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "raspi_id":     { "S": "rpi-002" },
+          "user_id":      { "S": "b6389d84-d1e4-4a60-a6e4-1c8414e23dd7" },
+          "registered_at":{ "S": "2025-07-05T14:45:00Z" },
+          "status":       { "S": "active" },
+          "model":        { "S": "Raspberry Pi 3 Model B+" },
+          "last_seen":    { "S": "2025-07-10T18:31:00Z" },
+          "ip_address":   { "S": "192.168.1.12" },
+          "description":  { "S": "Bridge de producción línea 1" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "raspi_id":     { "S": "rpi-003" },
+          "user_id":      { "S": "c9a0f942-5a2d-4c20-b387-2fbb9d30a55e" },
+          "registered_at":{ "S": "2025-07-08T08:15:00Z" },
+          "status":       { "S": "inactive" },
+          "model":        { "S": "Raspberry Pi Zero W" },
+          "last_seen":    { "S": "2025-07-09T09:00:00Z" },
+          "ip_address":   { "S": "192.168.1.50" },
+          "description":  { "S": "Raspberry de pruebas laboratorio A" }
+        }
+      }
+    }
+  ]
+}

@@ -125,6 +125,34 @@ Resources:
               Ref: MyApi
             Auth:
               Authorizer: NONE
+  GetRaspberryPisFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: s3://smartdevice-sam-artifacts-gsinbandera/0ddb7761e6eb6ad12efc92d06e67e99f
+      Handler: app.lambdaHandler
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          RASPBERRY_TABLE: RaspberryPis
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:Query
+          Resource:
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/RaspberryPis
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/RaspberryPis/index/user_id-index
+      Events:
+        GetRaspberryPis:
+          Type: Api
+          Properties:
+            Path: /raspberry-pis
+            Method: get
+            RestApiId:
+              Ref: MyApi
+            Auth:
+              Authorizer: CognitoAuthorizer
   DevicesTable:
     Type: AWS::DynamoDB::Table
     Properties:

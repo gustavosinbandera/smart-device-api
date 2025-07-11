@@ -130,7 +130,35 @@ Resources:
             Auth:
               Authorizer: NONE
 
-  # --- DynamoDB: Devices (single-table with GSIs) ---
+  GetRaspberryPisFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: get-device-bridge/
+      Handler: app.lambdaHandler
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          RASPBERRY_TABLE: RaspberryPis
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/RaspberryPis
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/RaspberryPis/index/user_id-index
+      Events:
+        GetRaspberryPis:
+          Type: Api
+          Properties:
+            Path: /raspberry-pis
+            Method: get
+            RestApiId: !Ref MyApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  ## --- DynamoDB: Devices (single-table with GSIs) ---
   DevicesTable:
     Type: AWS::DynamoDB::Table
     Properties:
