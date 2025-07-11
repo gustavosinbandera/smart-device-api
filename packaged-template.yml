@@ -1,0 +1,234 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: smart-device-api
+Globals:
+  Function:
+    Timeout: 5
+    Tracing: Active
+Resources:
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: SmartDeviceUserPool
+      AutoVerifiedAttributes:
+      - email
+      UsernameAttributes:
+      - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 6
+          RequireUppercase: false
+          RequireLowercase: false
+          RequireNumbers: true
+          RequireSymbols: false
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+        - Name: verified_email
+          Priority: 1
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: smart-device-client
+      UserPoolId:
+        Ref: CognitoUserPool
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+      - code
+      AllowedOAuthScopes:
+      - email
+      - openid
+      - profile
+      CallbackURLs:
+      - http://localhost:3000/callback
+      - https://app.domoticore.co/callback
+      LogoutURLs:
+      - http://localhost:3000/logout
+      - https://app.domoticore.co/logout
+      SupportedIdentityProviders:
+      - COGNITO
+  CognitoUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: smart-device-demo-domain
+      UserPoolId:
+        Ref: CognitoUserPool
+  MyApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: SmartDeviceApi
+      StageName: Prod
+      TracingEnabled: true
+      Cors:
+        AllowMethods: '''GET,OPTIONS'''
+        AllowHeaders: '''Authorization,Content-Type'''
+        AllowOrigin: '''*'''
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn:
+              Fn::GetAtt:
+              - CognitoUserPool
+              - Arn
+            Identity:
+              Header: Authorization
+  GetDevicesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: s3://smartdevice-sam-artifacts-gsinbandera/6d3d7660c73f6091763f339a4fbd70dc
+      Handler: app.lambdaHandler
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          DEVICES_TABLE: Devices
+          USERS_TABLE: Users
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:Query
+          - dynamodb:Scan
+          Resource:
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices/index/AliasIndex
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices/index/user_id-index
+        - Effect: Allow
+          Action:
+          - dynamodb:GetItem
+          Resource:
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices
+      - Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          Resource:
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Users
+      Events:
+        GetDevices:
+          Type: Api
+          Properties:
+            Path: /devices
+            Method: get
+            RestApiId:
+              Ref: MyApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetDevicesOptions:
+          Type: Api
+          Properties:
+            Path: /devices
+            Method: options
+            RestApiId:
+              Ref: MyApi
+            Auth:
+              Authorizer: NONE
+  DevicesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Devices
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: device_id
+        AttributeType: S
+      - AttributeName: sk
+        AttributeType: S
+      - AttributeName: alias
+        AttributeType: S
+      - AttributeName: alias_sk
+        AttributeType: S
+      - AttributeName: user_id
+        AttributeType: S
+      KeySchema:
+      - AttributeName: device_id
+        KeyType: HASH
+      - AttributeName: sk
+        KeyType: RANGE
+      GlobalSecondaryIndexes:
+      - IndexName: AliasIndex
+        KeySchema:
+        - AttributeName: alias
+          KeyType: HASH
+        - AttributeName: alias_sk
+          KeyType: RANGE
+        Projection:
+          ProjectionType: KEYS_ONLY
+      - IndexName: user_id-index
+        KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        - AttributeName: device_id
+          KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Users
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: user_id
+        AttributeType: S
+      KeySchema:
+      - AttributeName: user_id
+        KeyType: HASH
+  RaspberryPisTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: RaspberryPis
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: raspi_id
+        AttributeType: S
+      - AttributeName: user_id
+        AttributeType: S
+      KeySchema:
+      - AttributeName: raspi_id
+        KeyType: HASH
+      GlobalSecondaryIndexes:
+      - IndexName: user_id-index
+        KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        Projection:
+          ProjectionType: ALL
+  SharedAccessTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: SharedAccess
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: raspi_id
+        AttributeType: S
+      - AttributeName: shared_with
+        AttributeType: S
+      KeySchema:
+      - AttributeName: raspi_id
+        KeyType: HASH
+      - AttributeName: shared_with
+        KeyType: RANGE
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL for Prod stage
+    Value:
+      Fn::Sub: https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com/Prod
+  GetDevicesFunctionArn:
+    Description: ARN of GetDevices Lambda
+    Value:
+      Fn::GetAtt:
+      - GetDevicesFunction
+      - Arn
+  CognitoUserPoolId:
+    Description: Cognito User Pool ID
+    Value:
+      Ref: CognitoUserPool
+  CognitoUserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value:
+      Ref: CognitoUserPoolClient
+  CognitoUserPoolDomain:
+    Description: Cognito Domain
+    Value:
+      Ref: CognitoUserPoolDomain

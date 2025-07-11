@@ -84,27 +84,9 @@ Resources:
       CodeUri: get-devices/
       Handler: app.lambdaHandler
       Runtime: nodejs20.x
-      Events:
-        GetDevices:
-          Type: Api
-          Properties:
-            Path: /devices
-            Method: get
-            RestApiId: !Ref MyApi
-            Auth:
-              Authorizer: CognitoAuthorizer
-        DevicesOptions:
-          Type: Api
-          Properties:
-            Path: /devices
-            Method: options
-            RestApiId: !Ref MyApi
-            Auth:
-              Authorizer: NONE
       Environment:
         Variables:
           DEVICES_TABLE: Devices
-          DEVICE_ALIASES_TABLE: deviceAliases
           USERS_TABLE: Users
       Policies:
         - AWSLambdaBasicExecutionRole
@@ -115,45 +97,130 @@ Resources:
                 - dynamodb:Scan
               Resource:
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices/index/AliasIndex
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices/index/user_id-index
-                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/deviceAliases
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices
+        - Statement:
             - Effect: Allow
               Action:
                 - dynamodb:GetItem
                 - dynamodb:PutItem
               Resource:
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Users
+      Events:
+        GetDevices:
+          Type: Api
+          Properties:
+            Path: /devices
+            Method: get
+            RestApiId: !Ref MyApi
+            Auth:
+              Authorizer: CognitoAuthorizer
 
-  ## --- Nested Stacks para tablas DynamoDB ---
-  DevicesTableStack:
-    Type: AWS::Serverless::Application
-    DeletionPolicy: Retain
-    Properties:
-      Location: ./sam-templates/tables/devices.yml
+        GetDevicesOptions:
+          Type: Api
+          Properties:
+            Path: /devices
+            Method: options
+            RestApiId: !Ref MyApi
+            Auth:
+              Authorizer: NONE
 
-  UsersTableStack:
-    Type: AWS::Serverless::Application
-    DeletionPolicy: Retain
+  # --- DynamoDB: Devices (single-table with GSIs) ---
+  DevicesTable:
+    Type: AWS::DynamoDB::Table
     Properties:
-      Location: ./sam-templates/tables/users.yml
+      TableName: Devices
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: device_id
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: alias
+          AttributeType: S
+        - AttributeName: alias_sk
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: device_id
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: AliasIndex
+          KeySchema:
+            - AttributeName: alias
+              KeyType: HASH
+            - AttributeName: alias_sk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: user_id-index
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: device_id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
 
-  DeviceAliasesTableStack:
-    Type: AWS::Serverless::Application
-    DeletionPolicy: Retain
+  ## --- DynamoDB: Users ---
+  UsersTable:
+    Type: AWS::DynamoDB::Table
     Properties:
-      Location: ./sam-templates/tables/device-aliases.yml
+      TableName: Users
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
 
-  RaspberryPisTableStack:
-    Type: AWS::Serverless::Application
-    DeletionPolicy: Retain
+  ## --- DynamoDB: RaspberryPis ---
+  RaspberryPisTable:
+    Type: AWS::DynamoDB::Table
     Properties:
-      Location: ./sam-templates/tables/raspberry-pis.yml
+      TableName: RaspberryPis
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: raspi_id
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: raspi_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: user_id-index
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
 
-  SharedAccessTableStack:
-    Type: AWS::Serverless::Application
-    DeletionPolicy: Retain
+  ## --- DynamoDB: SharedAccess ---
+  SharedAccessTable:
+    Type: AWS::DynamoDB::Table
     Properties:
-      Location: ./sam-templates/tables/shared-access.yml
+      TableName: SharedAccess
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: raspi_id
+          AttributeType: S
+        - AttributeName: shared_with
+          AttributeType: S
+      KeySchema:
+        - AttributeName: raspi_id
+          KeyType: HASH
+        - AttributeName: shared_with
+          KeyType: RANGE
 
 Outputs:
   ApiUrl:

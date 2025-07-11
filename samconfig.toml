@@ -16,10 +16,12 @@ s3_bucket = "sam-artifacts-iot-2025"
 confirm_changeset = true
 resolve_s3 = true
 fail_on_empty_changeset = false
-s3_prefix = "smart-device-api-stack"
+s3_prefix = "smartdevice-sam-artifacts-gsinbandera"
 capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND"
 region = "us-east-1"
 image_repositories = []
+disable_rollback = true
+stack_name = "smartdevice-sam-artifacts-gsinbandera"
 
 [default.package.parameters]
 resolve_s3 = false

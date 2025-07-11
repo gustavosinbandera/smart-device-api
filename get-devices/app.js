@@ -9,7 +9,7 @@ const docClient = new AWS.DynamoDB.DocumentClient({ region: process.env.AWS_REGI
 
 // Table names from environment variables
 const DEVICES_TABLE = process.env.DEVICES_TABLE;
-const DEVICE_ALIASES_TABLE = process.env.DEVICE_ALIASES_TABLE;
+//const DEVICE_ALIASES_TABLE = process.env.DEVICE_ALIASES_TABLE;
 const USERS_TABLE = process.env.USERS_TABLE;
 
 // CORS headers
@@ -18,6 +18,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Authorization,Content-Type',
   'Access-Control-Allow-Methods': 'GET,OPTIONS'
 };
+
+// exports.handler = async () => {
+//   const AWS = require("aws-sdk");
+//   const ddb = new AWS.DynamoDB.DocumentClient();
+//   const data = await ddb.scan({ TableName: process.env.DEVICES_TABLE }).promise();
+//   console.log("Scan result:", JSON.stringify(data.Items));
+//   return {
+//     statusCode: 200,
+//     headers: corsHeaders,
+//     body: JSON.stringify(data.Items)
+//   };
+// };
 
 exports.lambdaHandler = async (event) => {
   try {
@@ -81,17 +93,18 @@ exports.lambdaHandler = async (event) => {
 
     const devicesResult = await docClient.query(devicesParams).promise();
 
-    const devices = devicesResult.Items;
+    console.log("**********************************");
+    console.log("**********************************");
+    console.log(`table name: ${process.env.DEVICES_TABLE}`);
+    const AWS = require("aws-sdk");
+    const ddb = new AWS.DynamoDB.DocumentClient();
+    const data = await ddb.scan({ TableName: process.env.DEVICES_TABLE }).promise();
+    console.log("Scan result:", JSON.stringify(data.Items));
 
-    // Optional: fetch aliases for each device
-    // for (let device of devices) {
-    //   const aliases = await docClient.query({
-    //     TableName: DEVICE_ALIASES_TABLE,
-    //     KeyConditionExpression: 'device_id = :did',
-    //     ExpressionAttributeValues: { ':did': device.device_id }
-    //   }).promise();
-    //   device.aliases = aliases.Items;
-    // }
+
+
+
+    const devices = devicesResult.Items;
 
     return {
       statusCode: 200,
