@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "Lambda to retrieve Raspberry Pis owned by the user",
   "main": "app.js",
-  "type": "module",
   "dependencies": {
+    "aws-sdk": "^2.1692.0",
     "jsonwebtoken": "^9.0.2"
   }
 }

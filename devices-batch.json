@@ -1,0 +1,40 @@
+{
+  "Devices": [
+    {
+      "PutRequest": {
+        "Item": {
+          "device_id": { "S": "esp32-001" },
+          "user_id": { "S": "user-001" },
+          "name": { "S": "ESP32 Cocina" },
+          "description": { "S": "Control de luces y ventilador" },
+          "location": { "S": "Cocina" },
+          "created_at": { "S": "2025-07-15T10:00:00Z" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "device_id": { "S": "esp32-002" },
+          "user_id": { "S": "user-001" },
+          "name": { "S": "ESP32 Sala" },
+          "description": { "S": "Sensor de temperatura y movimiento" },
+          "location": { "S": "Sala" },
+          "created_at": { "S": "2025-07-15T10:05:00Z" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "device_id": { "S": "esp32-003" },
+          "user_id": { "S": "user-002" },
+          "name": { "S": "ESP32 Garaje" },
+          "description": { "S": "Apertura de portón y luces exteriores" },
+          "location": { "S": "Garaje" },
+          "created_at": { "S": "2025-07-15T10:10:00Z" }
+        }
+      }
+    }
+  ]
+}

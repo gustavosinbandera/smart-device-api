@@ -4,16 +4,39 @@ const jwt = require('jsonwebtoken');
 const ddb = new AWS.DynamoDB.DocumentClient();
 const RASPBERRY_TABLE = process.env.RASPBERRY_TABLE;
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Authorization,Content-Type',
+  'Access-Control-Allow-Methods': 'GET,OPTIONS'
+};
+
 exports.lambdaHandler = async (event) => {
   try {
+    // 🔁 Manejo explícito del método OPTIONS (preflight)
+    if (event.httpMethod === 'OPTIONS') {
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: ''
+      };
+    }
+
     const token = event.headers?.Authorization || event.headers?.authorization;
     if (!token) {
-      return { statusCode: 401, body: JSON.stringify({ message: 'Token no proporcionado' }) };
+      return {
+        statusCode: 401,
+        headers: corsHeaders,
+        body: JSON.stringify({ message: 'Token no proporcionado' })
+      };
     }
 
     const decoded = jwt.decode(token);
     if (!decoded || !decoded.sub) {
-      return { statusCode: 403, body: JSON.stringify({ message: 'Token inválido' }) };
+      return {
+        statusCode: 403,
+        headers: corsHeaders,
+        body: JSON.stringify({ message: 'Token inválido' })
+      };
     }
 
     const user_id = decoded.sub;
@@ -29,6 +52,7 @@ exports.lambdaHandler = async (event) => {
 
     return {
       statusCode: 200,
+      headers: corsHeaders,
       body: JSON.stringify(result.Items)
     };
 
@@ -36,6 +60,7 @@ exports.lambdaHandler = async (event) => {
     console.error('Error:', err);
     return {
       statusCode: 500,
+      headers: corsHeaders,
       body: JSON.stringify({ message: 'Error interno del servidor' })
     };
   }

@@ -1,0 +1,72 @@
+{
+  "DeviceAliases": [
+    {
+      "PutRequest": {
+        "Item": {
+          "device_id": { "S": "esp32-001" },
+          "sk": { "S": "GPIO#1" },
+          "gpio": { "S": "gpio-1" },
+          "direction": { "S": "output" },
+          "type": { "S": "digital" },
+          "aliases": {
+            "L": [
+              { "S": "bombillo" },
+              { "S": "luz cocina" },
+              { "S": "foco cocina" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "device_id": { "S": "esp32-001" },
+          "sk": { "S": "GPIO#2" },
+          "gpio": { "S": "gpio-2" },
+          "direction": { "S": "input" },
+          "type": { "S": "digital" },
+          "aliases": {
+            "L": [
+              { "S": "sensor puerta" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "device_id": { "S": "esp32-002" },
+          "sk": { "S": "GPIO#4" },
+          "gpio": { "S": "gpio-4" },
+          "direction": { "S": "input" },
+          "type": { "S": "analog" },
+          "aliases": {
+            "L": [
+              { "S": "sensor temperatura" },
+              { "S": "sensor humedad" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "device_id": { "S": "esp32-003" },
+          "sk": { "S": "GPIO#5" },
+          "gpio": { "S": "gpio-5" },
+          "direction": { "S": "output" },
+          "type": { "S": "digital" },
+          "aliases": {
+            "L": [
+              { "S": "luces exteriores" },
+              { "S": "alumbrado garaje" }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

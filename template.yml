@@ -77,7 +77,7 @@ Resources:
             Identity:
               Header: Authorization
 
-  ## --- Lambda Functions ---
+  ## --- Lambda: Obtener dispositivos del usuario ---
   GetDevicesFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -87,6 +87,7 @@ Resources:
       Environment:
         Variables:
           DEVICES_TABLE: Devices
+          DEVICE_ALIASES_TABLE: DeviceAliases
           USERS_TABLE: Users
       Policies:
         - AWSLambdaBasicExecutionRole
@@ -97,9 +98,13 @@ Resources:
                 - dynamodb:Scan
               Resource:
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices
-                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices/index/AliasIndex
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices/index/user_id-index
             - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/DeviceAliases
+            - Effect: Allow 
               Action:
                 - dynamodb:GetItem
               Resource:
@@ -130,75 +135,125 @@ Resources:
             Auth:
               Authorizer: NONE
 
-  GetRaspberryPisFunction:
+  ## --- Lambda: Obtener un dispositivo por ID (con aliases incluidos) ---
+  GetDeviceByIdFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: get-device-bridge/
+      CodeUri: get-device-by-id/
       Handler: app.lambdaHandler
       Runtime: nodejs20.x
       Environment:
         Variables:
-          RASPBERRY_TABLE: RaspberryPis
+          DEVICES_TABLE: Devices
+          DEVICE_ALIASES_TABLE: DeviceAliases
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
             - Effect: Allow
               Action:
+                - dynamodb:GetItem
                 - dynamodb:Query
               Resource:
-                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/RaspberryPis
-                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/RaspberryPis/index/user_id-index
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Devices
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/DeviceAliases
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/DeviceAliases
       Events:
-        GetRaspberryPis:
+        GetDeviceById:
           Type: Api
           Properties:
-            Path: /raspberry-pis
+            Path: /devices/{device_id}
             Method: get
             RestApiId: !Ref MyApi
             Auth:
               Authorizer: CognitoAuthorizer
 
-  ## --- DynamoDB: Devices (single-table with GSIs) ---
+        GetDeviceByIdOptions:
+          Type: Api
+          Properties:
+            Path: /devices/{device_id}
+            Method: options
+            RestApiId: !Ref MyApi
+            Auth:
+              Authorizer: NONE
+
+
+  ## --- DynamoDB: Tabla principal de dispositivos ESP32 ---
+  ## Esta tabla guarda un ítem por dispositivo.
+  ## Campos recomendados:
+  ## - device_id (PK): string único del ESP32 (por ejemplo, esp32-001)
+  ## - user_id: ID del usuario dueño del dispositivo
+  ## - name: nombre opcional para mostrar ("Placa de prueba", "ESP Dormitorio")
+  ## - description: descripción opcional
+  ## - created_at: timestamp ISO
+  ## - location: texto o coordenadas (opcional)
   DevicesTable:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: Devices
-      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: device_id
-          AttributeType: S
-        - AttributeName: sk
-          AttributeType: S
-        - AttributeName: alias
-          AttributeType: S
-        - AttributeName: alias_sk
           AttributeType: S
         - AttributeName: user_id
           AttributeType: S
       KeySchema:
         - AttributeName: device_id
           KeyType: HASH
-        - AttributeName: sk
-          KeyType: RANGE
       GlobalSecondaryIndexes:
-        - IndexName: AliasIndex
-          KeySchema:
-            - AttributeName: alias
-              KeyType: HASH
-            - AttributeName: alias_sk
-              KeyType: RANGE
-          Projection:
-            ProjectionType: KEYS_ONLY
         - IndexName: user_id-index
           KeySchema:
             - AttributeName: user_id
               KeyType: HASH
-            - AttributeName: device_id
-              KeyType: RANGE
           Projection:
             ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
 
-  ## --- DynamoDB: Users ---
+  ## --- DynamoDB: Aliases y configuración de pines del ESP32 ---
+  ## Esta tabla usa el patrón de "single-table design":
+  ## - PK: device_id
+  ## - SK:
+  ##    - "#METADATA#": configuración general del dispositivo
+  ##    - "GPIO#gpio-1", "GPIO#gpio-2", etc: cada pin del ESP32
+  ##
+  ## Cada ítem "GPIO#" puede tener:
+  ## - aliases: lista de nombres (["luz cocina", "foco cocina"])
+  ## - direction: "input" | "output"
+  ## - type: "digital" | "analog"
+  ## - state: true/false (si es una salida, para reflejar estado actual)
+  ## - sensor_value: número (si es una entrada, valor leído)
+  ## - unit: "Celsius", "Lux", etc (opcional para sensores)
+  ##
+  ## El ítem "#METADATA#" puede incluir:
+  ## - firmware_version
+  ## - online: true/false
+  ## - last_seen: timestamp
+  DeviceAliasesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: DeviceAliases
+      AttributeDefinitions:
+        - AttributeName: device_id
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: device_id
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
+  ## --- DynamoDB: Usuarios registrados ---
+  ## Tabla simple para registrar usuarios por su user_id (del sub de Cognito).
+  ## Campos posibles:
+  ## - user_id (PK): sub de Cognito
+  ## - email: email del usuario
+  ## - name: nombre completo (opcional)
+  ## - created_at: timestamp
   UsersTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -211,29 +266,11 @@ Resources:
         - AttributeName: user_id
           KeyType: HASH
 
-  ## --- DynamoDB: RaspberryPis ---
-  RaspberryPisTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: RaspberryPis
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: raspi_id
-          AttributeType: S
-        - AttributeName: user_id
-          AttributeType: S
-      KeySchema:
-        - AttributeName: raspi_id
-          KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: user_id-index
-          KeySchema:
-            - AttributeName: user_id
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL
-
-  ## --- DynamoDB: SharedAccess ---
+  ## --- DynamoDB: Dispositivos compartidos entre usuarios ---
+  ## Permite compartir acceso a un dispositivo entre usuarios.
+  ## Campos:
+  ## - raspi_id: ID del dispositivo compartido (se puede renombrar si ya no hay Raspberry)
+  ## - shared_with: user_id del que recibe acceso
   SharedAccessTable:
     Type: AWS::DynamoDB::Table
     Properties:
