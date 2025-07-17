@@ -139,6 +139,7 @@ Resources:
   GetDeviceByIdFunction:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName: GetDeviceByIdFunction
       CodeUri: get-device-by-id/
       Handler: app.lambdaHandler
       Runtime: nodejs20.x
@@ -181,6 +182,78 @@ Resources:
             Auth:
               Authorizer: NONE
 
+
+  GetGpsHistoryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: get-gps-history/
+      Handler: app.lambdaHandler
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          GPS_LOGS_TABLE: GpsLogs
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/GpsLogs
+      Events:
+        GpsHistory:
+          Type: Api
+          Properties:
+            Path: /gps-history
+            Method: get
+            RestApiId: !Ref MyApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+        GpsHistoryOptions:
+          Type: Api
+          Properties:
+            Path: /gps-history
+            Method: options
+            RestApiId: !Ref MyApi
+            Auth:
+              Authorizer: NONE
+
+  SimulateGpsMovementFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: simulate-gps/
+      Handler: app.lambdaHandler
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          GPS_LOGS_TABLE: GpsLogs
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/GpsLogs
+      Events:
+        SimulateGps:
+          Type: Api
+          Properties:
+            Path: /simulate-gps
+            Method: post
+            RestApiId: !Ref MyApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+        SimulateGpsOptions:
+          Type: Api
+          Properties:
+            Path: /simulate-gps
+            Method: options
+            RestApiId: !Ref MyApi
+            Auth:
+              Authorizer: NONE
 
   ## --- DynamoDB: Tabla principal de dispositivos ESP32 ---
   ## Esta tabla guarda un ítem por dispositivo.
@@ -246,6 +319,23 @@ Resources:
         - AttributeName: sk
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
+
+  GpsLogsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: GpsLogs
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: device_id
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: device_id
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+          
 
   ## --- DynamoDB: Usuarios registrados ---
   ## Tabla simple para registrar usuarios por su user_id (del sub de Cognito).

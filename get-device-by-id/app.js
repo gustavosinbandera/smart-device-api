@@ -39,6 +39,7 @@ exports.lambdaHandler = async (event) => {
     }
 
     const deviceId = event.pathParameters.device_id;
+    console.log('deviceId actual:', deviceId);
 
     // Verificar propiedad del dispositivo
     const device = await ddb.get({

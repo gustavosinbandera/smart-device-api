@@ -133,7 +133,8 @@ Resources:
   GetDeviceByIdFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://smartdevice-sam-artifacts-gsinbandera/17df5293a22c484c83f19ebd4349453c
+      FunctionName: GetDeviceByIdFunction
+      CodeUri: s3://smartdevice-sam-artifacts-gsinbandera/b66dc599fef5c76fd0ec97c97f23de38
       Handler: app.lambdaHandler
       Runtime: nodejs20.x
       Environment:
@@ -175,6 +176,78 @@ Resources:
               Ref: MyApi
             Auth:
               Authorizer: NONE
+  GetGpsHistoryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: s3://smartdevice-sam-artifacts-gsinbandera/68f6a84aec11b65f2f5b860ece12d17e
+      Handler: app.lambdaHandler
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          GPS_LOGS_TABLE: GpsLogs
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:Query
+          Resource:
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/GpsLogs
+      Events:
+        GpsHistory:
+          Type: Api
+          Properties:
+            Path: /gps-history
+            Method: get
+            RestApiId:
+              Ref: MyApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GpsHistoryOptions:
+          Type: Api
+          Properties:
+            Path: /gps-history
+            Method: options
+            RestApiId:
+              Ref: MyApi
+            Auth:
+              Authorizer: NONE
+  SimulateGpsMovementFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: s3://smartdevice-sam-artifacts-gsinbandera/c9d97f7659c6b977604ab02a1452af8b
+      Handler: app.lambdaHandler
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          GPS_LOGS_TABLE: GpsLogs
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:PutItem
+          Resource:
+          - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/GpsLogs
+      Events:
+        SimulateGps:
+          Type: Api
+          Properties:
+            Path: /simulate-gps
+            Method: post
+            RestApiId:
+              Ref: MyApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+        SimulateGpsOptions:
+          Type: Api
+          Properties:
+            Path: /simulate-gps
+            Method: options
+            RestApiId:
+              Ref: MyApi
+            Auth:
+              Authorizer: NONE
   DevicesTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -210,6 +283,21 @@ Resources:
       - AttributeName: sk
         KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
+  GpsLogsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: GpsLogs
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: device_id
+        AttributeType: S
+      - AttributeName: timestamp
+        AttributeType: S
+      KeySchema:
+      - AttributeName: device_id
+        KeyType: HASH
+      - AttributeName: timestamp
+        KeyType: RANGE
   UsersTable:
     Type: AWS::DynamoDB::Table
     Properties:
