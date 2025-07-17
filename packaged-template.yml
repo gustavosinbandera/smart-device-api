@@ -179,7 +179,7 @@ Resources:
   GetGpsHistoryFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://smartdevice-sam-artifacts-gsinbandera/68f6a84aec11b65f2f5b860ece12d17e
+      CodeUri: s3://smartdevice-sam-artifacts-gsinbandera/e03fa53ddccfbd2e93c3536c0f2d815c
       Handler: app.lambdaHandler
       Runtime: nodejs20.x
       Environment:
@@ -197,7 +197,7 @@ Resources:
         GpsHistory:
           Type: Api
           Properties:
-            Path: /gps-history
+            Path: /get-gps-history
             Method: get
             RestApiId:
               Ref: MyApi
@@ -206,7 +206,7 @@ Resources:
         GpsHistoryOptions:
           Type: Api
           Properties:
-            Path: /gps-history
+            Path: /get-gps-history
             Method: options
             RestApiId:
               Ref: MyApi
@@ -215,7 +215,7 @@ Resources:
   SimulateGpsMovementFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://smartdevice-sam-artifacts-gsinbandera/c9d97f7659c6b977604ab02a1452af8b
+      CodeUri: s3://smartdevice-sam-artifacts-gsinbandera/0add20f80b7c85773519a147c278ca73
       Handler: app.lambdaHandler
       Runtime: nodejs20.x
       Environment:
@@ -227,6 +227,7 @@ Resources:
         - Effect: Allow
           Action:
           - dynamodb:PutItem
+          - dynamodb:BatchWriteItem
           Resource:
           - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/GpsLogs
       Events:

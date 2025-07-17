@@ -204,7 +204,7 @@ Resources:
         GpsHistory:
           Type: Api
           Properties:
-            Path: /gps-history
+            Path: /get-gps-history
             Method: get
             RestApiId: !Ref MyApi
             Auth:
@@ -213,7 +213,7 @@ Resources:
         GpsHistoryOptions:
           Type: Api
           Properties:
-            Path: /gps-history
+            Path: /get-gps-history
             Method: options
             RestApiId: !Ref MyApi
             Auth:
@@ -231,11 +231,12 @@ Resources:
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:PutItem
-              Resource:
-                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/GpsLogs
+          - Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:BatchWriteItem  # 👈 se agregó esta línea
+            Resource:
+              - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/GpsLogs
       Events:
         SimulateGps:
           Type: Api

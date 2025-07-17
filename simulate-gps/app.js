@@ -1,7 +1,24 @@
+// simulate-gps/app.js
+
 const AWS = require('aws-sdk');
 const docClient = new AWS.DynamoDB.DocumentClient();
 
+// CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Authorization,Content-Type',
+  'Access-Control-Allow-Methods': 'POST,OPTIONS'
+};
+
 exports.lambdaHandler = async (event) => {
+  // Manejo de preflight CORS
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: corsHeaders
+    };
+  }
+
   const body = JSON.parse(event.body || '{}');
   const deviceId = body.device_id || 'esp32-armenia';
   const route = [
@@ -42,12 +59,14 @@ exports.lambdaHandler = async (event) => {
 
     return {
       statusCode: 200,
+      headers: corsHeaders,
       body: JSON.stringify({ message: `Simulados ${items.length} puntos en Armenia, Quindío`, deviceId }),
     };
   } catch (err) {
     console.error('Error al simular GPS:', err);
     return {
       statusCode: 500,
+      headers: corsHeaders,
       body: JSON.stringify({ error: err.message }),
     };
   }
