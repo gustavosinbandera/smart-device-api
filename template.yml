@@ -255,6 +255,48 @@ Resources:
             RestApiId: !Ref MyApi
             Auth:
               Authorizer: NONE
+  
+  UpdateDeviceAliasesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: UpdateDeviceAliasesFunction
+      CodeUri: update-device-aliases/          # 📂 carpeta con tu handler
+      Handler: app.lambdaHandler               # export default = lambdaHandler
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          DEVICE_ALIASES_TABLE: DeviceAliases
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+                - dynamodb:PutItem
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/DeviceAliases
+      Events:
+        # ---------- PUT ----------
+        UpdateDeviceAliases:
+          Type: Api
+          Properties:
+            Path: /devices/{device_id}/gpio/{gpio}/aliases
+            Method: put
+            RestApiId: !Ref MyApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+        # ---------- OPTIONS (CORS pre-flight) ----------
+        UpdateDeviceAliasesOptions:
+          Type: Api
+          Properties:
+            Path: /devices/{device_id}/gpio/{gpio}/aliases
+            Method: options
+            RestApiId: !Ref MyApi
+            Auth:
+              Authorizer: NONE            # sin token para el pre-flight
+
+  
 
   ## --- DynamoDB: Tabla principal de dispositivos ESP32 ---
   ## Esta tabla guarda un ítem por dispositivo.

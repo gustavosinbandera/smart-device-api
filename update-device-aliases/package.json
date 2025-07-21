@@ -1,0 +1,16 @@
+{
+  "name": "update-device-aliases",
+  "version": "1.0.0",
+  "description": "Actualiza la lista de aliases de un GPIO en DynamoDB",
+  "main": "app.js",
+  "type": "module",
+  "author": "Tu Nombre",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.540.0",
+    "uuid": "^9.0.1"
+  },
+  "scripts": {
+    "test": "echo \"no tests yet\""
+  }
+}
